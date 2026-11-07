@@ -1,0 +1,19 @@
+# Python
+__pycache__/
+*.py[oc]
+.venv/
+.pytest_cache/
+.ruff_cache/
+/build/
+*.egg-info/
+
+# Built bundles (rebuild with mcpb pack / package_skill.py)
+dist/
+
+# Local data: the index, its state and the link key
+data/
+
+# Local settings: the folders to index on this machine
+folders.toml
+
+.DS_Store

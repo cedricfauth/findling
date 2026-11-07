@@ -1,0 +1,740 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Findling</title>
+<style>
+  :root {
+    --bg: #f7f7f5;
+    --surface: #ffffff;
+    --surface-2: #f0f0ed;
+    --text: #1d1d1b;
+    --muted: #6b6b66;
+    --border: #e2e2dd;
+    --accent: #2f5bd3;
+    --accent-soft: #e8eefc;
+    --mark: #fff1a8;
+    --ok: #1f8a4c;
+    --warn: #b7791f;
+    --bad: #c53030;
+    --shadow: 0 1px 2px rgba(0,0,0,.04), 0 2px 8px rgba(0,0,0,.04);
+    --radius: 10px;
+    --mono: ui-monospace, SFMono-Regular, Menlo, monospace;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #161615;
+      --surface: #1f1f1d;
+      --surface-2: #2a2a27;
+      --text: #ececea;
+      --muted: #9a9a94;
+      --border: #33332f;
+      --accent: #7c9cf5;
+      --accent-soft: #252d45;
+      --mark: #5a4b12;
+      --ok: #4cc782;
+      --warn: #e0a84a;
+      --bad: #f07272;
+      --shadow: none;
+    }
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; }
+  body {
+    background: var(--bg); color: var(--text);
+    font: 15px/1.5 -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+  }
+  button, input, select { font: inherit; color: inherit; }
+  button {
+    cursor: pointer; border: 1px solid var(--border); background: var(--surface);
+    border-radius: 8px; padding: 6px 12px;
+  }
+  button:hover { background: var(--surface-2); }
+  button.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+  button.primary:hover { filter: brightness(1.08); }
+  button.link { border: none; background: none; padding: 0; color: var(--accent); }
+  button.link:hover { text-decoration: underline; background: none; }
+  button:disabled { opacity: .5; cursor: default; }
+  a.button {
+    border: 1px solid var(--border); background: var(--surface); border-radius: 8px;
+    padding: 6px 12px; color: inherit; text-decoration: none;
+  }
+  a.button:hover { background: var(--surface-2); }
+
+  header {
+    display: flex; align-items: center; justify-content: space-between; gap: 16px;
+    padding: 14px 24px; border-bottom: 1px solid var(--border); background: var(--surface);
+  }
+  .brand { font-weight: 700; font-size: 26px; letter-spacing: -.02em; line-height: 1.2; }
+  .brand span { color: var(--accent); }
+  .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--muted); flex: none; }
+  .dot.ok { background: var(--ok); }
+  .dot.warn { background: var(--warn); }
+  .dot.bad { background: var(--bad); }
+  .dot.busy { background: var(--accent); animation: pulse 1.2s ease-in-out infinite; }
+  @keyframes pulse { 50% { opacity: .35; } }
+
+  main {
+    display: grid; grid-template-columns: minmax(0, 1fr) 340px; gap: 24px;
+    max-width: 1180px; margin: 0 auto; padding: 24px;
+  }
+  @media (max-width: 860px) {
+    main { grid-template-columns: minmax(0, 1fr); padding: 16px; }
+    header { padding: 12px 16px; }
+  }
+
+  .searchbar { display: flex; gap: 8px; }
+  .searchbar input {
+    flex: 1; min-width: 0; padding: 12px 16px; font-size: 17px; border-radius: var(--radius);
+    border: 1px solid var(--border); background: var(--surface); box-shadow: var(--shadow); outline: none;
+  }
+  .searchbar input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
+  .searchbar select {
+    max-width: 180px; padding: 0 10px; border-radius: var(--radius);
+    border: 1px solid var(--border); background: var(--surface);
+  }
+  .meta { color: var(--muted); font-size: 13px; margin: 10px 2px 14px; min-height: 20px; }
+
+  .result {
+    background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
+    padding: 14px 16px; margin-bottom: 12px; box-shadow: var(--shadow);
+  }
+  .result-head { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; }
+  .badge {
+    font: 600 11px/1 var(--mono); text-transform: uppercase; padding: 4px 6px; border-radius: 5px;
+    background: var(--accent-soft); color: var(--accent); flex: none;
+  }
+  .result-name { font-weight: 600; word-break: break-word; }
+  .result-path { color: var(--muted); font-size: 13px; word-break: break-all; margin-top: 2px; }
+  .result-actions { margin-left: auto; display: flex; gap: 6px; }
+  .result-actions button, .result-actions a.button { font-size: 13px; padding: 3px 10px; }
+  .match { margin-top: 10px; }
+  .match + .match { border-top: 1px dashed var(--border); padding-top: 10px; }
+  .match-head { display: flex; align-items: flex-start; gap: 10px; margin-bottom: 4px; }
+  .crumbs { font-size: 13px; color: var(--muted); flex: 1; min-width: 0; }
+  .match-head a.button { font-size: 12px; padding: 1px 9px; flex: none; margin-left: auto; }
+  .crumbs b { font-weight: 550; color: var(--text); }
+  .snippet { white-space: pre-wrap; word-break: break-word; }
+  .snippet.code { font: 13px/1.5 var(--mono); }
+  mark { background: var(--mark); color: inherit; border-radius: 3px; padding: 0 1px; }
+  .more-row { margin-top: 8px; font-size: 13px; display: flex; gap: 14px; }
+
+  .notice {
+    background: var(--surface-2); border: 1px solid var(--border); border-radius: var(--radius);
+    padding: 10px 14px; margin-bottom: 12px; font-size: 14px; color: var(--muted);
+  }
+  .notice b { color: var(--text); }
+
+  .empty {
+    text-align: center; color: var(--muted); padding: 48px 16px;
+    border: 1px dashed var(--border); border-radius: var(--radius);
+  }
+  .empty h2 { color: var(--text); font-size: 17px; margin: 0 0 6px; }
+
+  aside { display: flex; flex-direction: column; gap: 16px; }
+  .panel {
+    background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
+    padding: 14px 16px; box-shadow: var(--shadow);
+  }
+  .panel h3 {
+    margin: 0 0 10px; font-size: 13px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted);
+    display: flex; justify-content: space-between; align-items: center;
+  }
+  .phase { display: flex; align-items: center; gap: 8px; font-weight: 600; min-height: 28px; }
+  .phase-label { flex: 1; min-width: 0; }
+  .phase-action {
+    display: inline-flex; align-items: center; gap: 6px; flex: none;
+    font-size: 12px; font-weight: 500; padding: 4px 10px; border-radius: 999px;
+  }
+  .phase-action svg { width: 10px; height: 10px; fill: currentColor; }
+  .phase-action.resume { background: var(--accent); border-color: var(--accent); color: #fff; }
+  .phase-action.resume:hover { filter: brightness(1.08); background: var(--accent); }
+  .phase-msg { color: var(--muted); font-size: 13px; margin-top: 4px; word-break: break-word; }
+  .progress { margin-top: 12px; }
+  .progress-bar { height: 6px; background: var(--surface-2); border-radius: 3px; overflow: hidden; }
+  .progress-bar > div { height: 100%; background: var(--accent); border-radius: 3px; transition: width .4s ease; }
+  .progress-text { display: flex; justify-content: space-between; gap: 8px; font-size: 12px;
+    color: var(--muted); margin-top: 4px; font-variant-numeric: tabular-nums; }
+  .counters { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-top: 12px; }
+  .counter { background: var(--surface-2); border-radius: 8px; padding: 6px 8px; }
+  .counter .n { font-weight: 650; font-variant-numeric: tabular-nums; }
+  .counter .l { font-size: 12px; color: var(--muted); }
+  .counter.bad .n { color: var(--bad); }
+  .list { list-style: none; margin: 10px 0 0; padding: 0; font-size: 13px; }
+  .list li { display: flex; gap: 8px; align-items: baseline; padding: 3px 0; }
+  .list .grow { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .list .muted { color: var(--muted); flex: none; }
+  details { margin-top: 10px; font-size: 13px; }
+  summary { cursor: pointer; color: var(--muted); }
+  details .list li { flex-direction: column; gap: 0; }
+  details .reason { color: var(--muted); word-break: break-word; }
+
+  .folder { padding: 10px 0; border-top: 1px solid var(--border); }
+  .folder:first-of-type { border-top: none; padding-top: 0; }
+  .folder-top { display: flex; align-items: center; gap: 8px; }
+  .folder-name { font-weight: 600; flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .folder-path { font-size: 12px; color: var(--muted); word-break: break-all; }
+  .folder-stats { font-size: 12px; color: var(--muted); margin-top: 2px; }
+  .folder-problem { font-size: 12px; color: var(--bad); margin-top: 4px; }
+  .folder .remove { font-size: 12px; padding: 2px 8px; }
+  .confirm { display: flex; gap: 6px; align-items: center; font-size: 12px; margin-top: 6px; }
+  .confirm button { font-size: 12px; padding: 2px 8px; }
+  .confirm .danger { background: var(--bad); border-color: var(--bad); color: #fff; }
+  .add-row { display: flex; gap: 6px; margin-top: 12px; }
+  .add-row input {
+    flex: 1; min-width: 0; padding: 6px 10px; border-radius: 8px; border: 1px solid var(--border);
+    background: var(--surface); font-size: 13px;
+  }
+  .full { width: 100%; margin-top: 4px; }
+
+  #toast {
+    position: fixed; left: 50%; bottom: 24px; transform: translateX(-50%) translateY(20px);
+    background: var(--text); color: var(--bg); padding: 10px 16px; border-radius: 8px; font-size: 14px;
+    max-width: min(560px, calc(100vw - 32px)); opacity: 0; pointer-events: none;
+    transition: opacity .2s, transform .2s;
+  }
+  #toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+  #toast.bad { background: var(--bad); color: #fff; }
+  .spinner {
+    width: 10px; height: 10px; border: 2px solid var(--border); border-top-color: var(--accent);
+    border-radius: 50%; animation: spin .8s linear infinite; flex: none; align-self: center;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+</style>
+</head>
+<body>
+<header>
+  <div class="brand"><span>Find</span>ling</div>
+</header>
+
+<main>
+  <section>
+    <form class="searchbar" id="search-form" autocomplete="off">
+      <input id="q" type="search" placeholder="Search your files…  (press / to focus)" autofocus>
+      <select id="folder-filter" title="Search in"><option value="">All folders</option></select>
+    </form>
+    <div class="meta" id="meta"></div>
+    <div id="results"></div>
+  </section>
+
+  <aside>
+    <div class="panel" id="indexing-panel">
+      <h3>Indexing</h3>
+      <div id="indexing"><div class="phase"><span class="dot busy"></span><span class="phase-label">Starting…</span></div></div>
+    </div>
+    <div class="panel">
+      <h3>Folders</h3>
+      <div id="folders"></div>
+      <button class="primary full" id="pick">Add folder…</button>
+      <form class="add-row" id="add-form">
+        <input id="add-path" placeholder="or paste a path, e.g. ~/Documents">
+        <button type="submit">Add</button>
+      </form>
+    </div>
+  </aside>
+</main>
+
+<div id="toast"></div>
+
+<script>
+"use strict";
+
+const $ = (id) => document.getElementById(id);
+const el = (tag, props = {}, ...children) => {
+  const node = Object.assign(document.createElement(tag), props);
+  for (const c of children) if (c != null) node.append(c);
+  return node;
+};
+
+let status = null;
+let lastStatusKey = "";
+let lastResults = null;
+const openDetails = new Set(); // which collapsible lists the user has opened
+
+// ---------- helpers ----------
+
+let toastTimer;
+function toast(message, bad = false) {
+  const t = $("toast");
+  t.textContent = message;
+  t.className = "show" + (bad ? " bad" : "");
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => (t.className = bad ? "bad" : ""), bad ? 6000 : 3000);
+}
+
+async function api(path, body) {
+  const options = body === undefined ? {} : {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  };
+  const res = await fetch(path, options);
+  let data = null;
+  try { data = await res.json(); } catch { /* empty body */ }
+  if (!res.ok) throw new Error((data && data.detail) || `Request failed (${res.status})`);
+  return data;
+}
+
+const fmt = (n) => n.toLocaleString();
+const plural = (n, word) => `${fmt(n)} ${word}${n === 1 ? "" : "s"}`;
+const CODE_TYPES = new Set(["py","js","ts","tsx","jsx","java","go","rs","c","h","cpp","cs","rb","php","swift",
+  "kt","scala","sh","sql","json","yaml","yml","toml","css","scss","html","xml","lua","r","dart","vue","svelte"]);
+
+// Text with <mark>s at [start, end] ranges. Ranges count code points (as in Python),
+// so slice an array of code points, not the UTF-16 string.
+function marked(text, ranges, from = 0, to = null) {
+  const chars = Array.from(text);
+  to = to ?? chars.length;
+  const frag = document.createDocumentFragment();
+  let pos = from;
+  for (const [a, b] of ranges || []) {
+    const s0 = Math.max(a, from), e0 = Math.min(b, to);
+    if (e0 <= s0) continue;
+    if (s0 > pos) frag.append(chars.slice(pos, s0).join(""));
+    frag.append(el("mark", { textContent: chars.slice(s0, e0).join("") }));
+    pos = e0;
+  }
+  if (pos < to) frag.append(chars.slice(pos, to).join(""));
+  return frag;
+}
+
+// Collapse runs of whitespace inside a fragment's text nodes (prose only).
+function squeeze(frag) {
+  for (const node of [frag, ...frag.querySelectorAll("mark")])
+    for (const t of node.childNodes)
+      if (t.nodeType === Node.TEXT_NODE) t.textContent = t.textContent.replace(/\s+/g, " ");
+  return frag;
+}
+
+// ---------- search ----------
+
+// Search once typing pauses this long. The running search is only cancelled then
+// too, so short pauses while typing don't start and cancel searches.
+const TYPING_PAUSE_MS = 200;
+// While typing, shorter queries aren't searched: full-text search needs 3 letters,
+// and meaning search on a letter or two finds nothing useful. Enter searches anyway.
+const MIN_TYPED_CHARS = 3;
+let searchHint = ""; // shown instead of results, e.g. "type at least 3 characters"
+let searchTimer;
+let searchController;
+let searchKey = null; // query + folder of the search running or shown
+
+// force: search again even if the query is unchanged (Enter refreshes the results).
+function scheduleSearch(delay = TYPING_PAUSE_MS, force = false) {
+  clearTimeout(searchTimer);
+  searchTimer = setTimeout(() => runSearch(force), delay);
+}
+
+async function runSearch(force = false) {
+  const q = $("q").value.trim();
+  const folder = $("folder-filter").value;
+  const key = JSON.stringify([q, folder]);
+  // Same query as before (e.g. a trailing space, or a letter typed and deleted):
+  // keep the running search or the results shown.
+  if (key === searchKey && !force) return;
+  if (searchController) searchController.abort();
+  searchKey = null;
+  searchHint = "";
+  if (!q || (!force && Array.from(q).length < MIN_TYPED_CHARS)) {
+    searchKey = key;
+    if (q) searchHint = `Type at least ${MIN_TYPED_CHARS} characters, or press Enter to search.`;
+    lastResults = null;
+    renderResults();
+    return;
+  }
+  if (status && !status.model_ready) {
+    $("meta").textContent = "The search model is still loading…";
+    return;
+  }
+  searchKey = key;
+  searchController = new AbortController();
+  const params = new URLSearchParams({ q, k: "15" });
+  if (folder) params.set("folder", folder);
+  try {
+    const res = await fetch(`/api/search?${params}`, { signal: searchController.signal });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.detail || "Search failed");
+    lastResults = data;
+    renderResults();
+  } catch (e) {
+    if (e.name === "AbortError") return;
+    searchKey = null; // failed: the same query may be tried again
+    $("meta").textContent = e.message;
+  }
+}
+
+function renderResults() {
+  const box = $("results");
+  box.replaceChildren();
+  if (!lastResults) {
+    $("meta").textContent = searchHint;
+    if (status && status.folders.length === 0) {
+      box.append(el("div", { className: "empty" },
+        el("h2", { textContent: "Nothing indexed yet" }),
+        el("div", { textContent: "Add a folder on the right to start indexing." })));
+    }
+    return;
+  }
+  const { results, seconds, weak } = lastResults;
+  $("meta").textContent = results.length
+    ? `${plural(results.length, "file")} · ${Math.round(seconds * 1000)} ms`
+    : "";
+  if (!results.length) {
+    box.append(el("div", { className: "empty" },
+      el("h2", { textContent: "No matches" }),
+      el("div", { textContent: "Try other words, or check that the folder is indexed." })));
+    return;
+  }
+  if (weak) {
+    box.append(el("div", { className: "notice" },
+      el("b", { textContent: "No file contains these words. " }),
+      "These are the closest matches by meaning and may not be what you're looking for."));
+  }
+  for (const r of results) box.append(renderResult(r));
+}
+
+function renderMatch(r, m, isCode) {
+  const crumbs = [];
+  if (m.headings) {
+    const b = el("b");
+    b.append(marked(m.headings, m.heading_highlights));
+    // " > " separators read nicer as " › " (same length, so ranges stay valid)
+    for (const t of [b, ...b.querySelectorAll("mark")])
+      for (const n of t.childNodes)
+        if (n.nodeType === Node.TEXT_NODE) n.textContent = n.textContent.replaceAll(" > ", " › ");
+    crumbs.push(b);
+  }
+  if (m.page) crumbs.push(`${m.headings ? " · " : ""}page ${m.page}`);
+  const length = Array.from(m.text).length;
+  const [from, to] = m.snippet || [0, length];
+  const partial = from > 0 || to < length;
+  const snippet = el("div", { className: "snippet" + (isCode ? " code" : "") });
+  const show = (full) => {
+    const frag = full ? marked(m.text, m.highlights) : marked(m.text, m.highlights, from, to);
+    if (!full && from > 0) frag.prepend("… ");
+    if (!full && to < length) frag.append(" …");
+    snippet.replaceChildren(isCode ? frag : squeeze(frag));
+  };
+  show(false);
+  // View: this passage highlighted in the file (when the browser can show the file).
+  const url = m.view_url; // from the server: /show/… (null for Office files)
+  const view = url ? el("a", { className: "button", href: url, target: "_blank", textContent: "View",
+    title: "Open the file in the browser with this passage highlighted" }) : null;
+  const head = crumbs.length || view
+    ? el("div", { className: "match-head" }, crumbs.length ? el("div", { className: "crumbs" }, ...crumbs) : null, view)
+    : null;
+  const node = el("div", { className: "match" }, head, snippet);
+  if (partial) {
+    let full = false;
+    const toggle = el("button", { className: "link", textContent: "Show more", type: "button" });
+    toggle.onclick = () => { full = !full; show(full); toggle.textContent = full ? "Show less" : "Show more"; };
+    node.append(el("div", { className: "more-row" }, toggle));
+  }
+  return node;
+}
+
+function renderResult(r) {
+  const folderName = r.folder.split("/").filter(Boolean).pop() || r.folder;
+  const isCode = CODE_TYPES.has(r.file_type);
+  const revealBtn = el("button", { textContent: "Show in Finder", type: "button", title: r.full_path });
+  revealBtn.onclick = () => openFile(r, true);
+  // Files the browser can show get a View button on each passage instead (renderMatch).
+  // The rest (Word, PowerPoint, Excel) get one here that opens them in their app.
+  let viewBtn = null;
+  if (!r.matches[0].view_url) {
+    viewBtn = el("button", { textContent: "View", type: "button", title: "Open in its app" });
+    viewBtn.onclick = () => openFile(r, false);
+  }
+  const card = el("article", { className: "result" },
+    el("div", { className: "result-head" },
+      el("span", { className: "badge", textContent: (r.file_type || "file").slice(0, 8) }),
+      el("span", { className: "result-name", textContent: r.name }),
+      el("div", { className: "result-actions" }, viewBtn, revealBtn)),
+    el("div", { className: "result-path", title: r.full_path }, `${folderName}/`, marked(r.path, r.path_highlights)),
+    renderMatch(r, r.matches[0], isCode));
+  if (r.matches.length > 1) {
+    const extra = el("div", { hidden: true }, ...r.matches.slice(1).map((m) => renderMatch(r, m, isCode)));
+    const n = r.matches.length - 1;
+    const btn = el("button", { className: "link", type: "button",
+      textContent: `${n} more ${n === 1 ? "match" : "matches"} in this file` });
+    btn.onclick = () => {
+      extra.hidden = !extra.hidden;
+      btn.textContent = extra.hidden ? `${n} more ${n === 1 ? "match" : "matches"} in this file` : "Hide other matches";
+    };
+    card.append(extra, el("div", { className: "more-row" }, btn));
+  }
+  return card;
+}
+
+async function openFile(r, reveal) {
+  try { await api("/api/open", { folder: r.folder, path: r.path, reveal }); }
+  catch (e) { toast(e.message, true); }
+}
+
+// ---------- status ----------
+
+// A <details> list that stays open/closed across the once-a-second re-render.
+function collapsible(id, summary, list) {
+  const node = el("details", { open: openDetails.has(id) }, el("summary", { textContent: summary }), list);
+  node.addEventListener("toggle", () => {
+    if (node.open) openDetails.add(id); else openDetails.delete(id);
+  });
+  return node;
+}
+
+const PHASES = {
+  starting:      ["busy", "Starting…"],
+  loading_model: ["busy", "Loading search model…"],
+  catching_up:   ["busy", "Indexing…"],
+  updating:      ["busy", "Updating changed files…"],
+  up_to_date:    ["ok",   "Up to date"],
+  paused:        ["warn", "Indexing paused"],
+  user_paused:   ["warn", "Paused by you"],
+  error:         ["bad",  "Indexing error"],
+};
+
+const ICONS = {
+  pause: '<svg viewBox="0 0 10 10" aria-hidden="true"><rect x="1.5" y="1" width="2.5" height="8" rx=".6"/><rect x="6" y="1" width="2.5" height="8" rx=".6"/></svg>',
+  play:  '<svg viewBox="0 0 10 10" aria-hidden="true"><path d="M2.5 1.2v7.6a.5.5 0 0 0 .76.43l6.1-3.8a.5.5 0 0 0 0-.86L3.26.77a.5.5 0 0 0-.76.43z"/></svg>',
+  retry: '<svg viewBox="0 0 10 10" aria-hidden="true"><path d="M8.4 5.6A3.5 3.5 0 1 1 7.5 2.5" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><path d="M8.9.6v3H5.9z"/></svg>',
+};
+
+// Poll often only while something is happening; back off when idle or hidden.
+const BUSY_PHASES = new Set(["starting", "loading_model", "catching_up", "updating"]);
+let pollTimer;
+
+function nextPollDelay() {
+  if (document.hidden) return 30000;
+  if (!status) return 3000; // server not reachable: retry soon
+  return BUSY_PHASES.has(status.indexing.phase) ? 2000 : 10000;
+}
+
+// After a user action: refresh now instead of waiting for the next poll.
+function refreshSoon() {
+  clearTimeout(pollTimer);
+  pollStatus();
+}
+
+async function pollStatus() {
+  clearTimeout(pollTimer);
+  try {
+    const wasReady = status && status.model_ready;
+    const next = await api("/api/status");
+    const key = JSON.stringify({ ...next, uptime: 0 });
+    status = next;
+    if (key !== lastStatusKey) {
+      lastStatusKey = key;
+      renderStatus();
+    }
+    if (!wasReady && status.model_ready && $("q").value.trim()) runSearch();
+  } catch {
+    status = null;
+    lastStatusKey = "";
+    $("indexing").replaceChildren(el("div", { className: "phase" },
+      el("span", { className: "dot bad" }), el("span", { className: "phase-label", textContent: "Server not reachable" })));
+  }
+  clearTimeout(pollTimer); // an overlapping refreshSoon() must not start a second loop
+  pollTimer = setTimeout(pollStatus, nextPollDelay());
+}
+
+// "about 3 h 20 min left" from the server's estimate (null while it's still measuring).
+function timeLeft(seconds) {
+  if (seconds == null) return "estimating time left…";
+  const min = Math.round(seconds / 60);
+  if (min < 1) return "less than a minute left";
+  if (min < 60) return `about ${min} min left`;
+  const rounded = Math.round(min / 5) * 5; // hours away, minutes don't need to be exact
+  const h = Math.floor(rounded / 60), m = rounded % 60;
+  return `about ${h} h${m ? ` ${m} min` : ""} left`;
+}
+
+function renderStatus() {
+  const ix = status.indexing;
+  const [dot, label] = PHASES[ix.phase] || ["", ix.phase];
+
+  const f = ix.files || {};
+  const box = $("indexing");
+  // Pause / Resume / Retry sits at the right end of the status line.
+  const control = {
+    catching_up: ["Pause", "pause", ICONS.pause],
+    updating:    ["Pause", "pause", ICONS.pause],
+    user_paused: ["Resume", "resume", ICONS.play],
+    paused:      ["Retry", "restart", ICONS.retry],
+    error:       ["Retry", "restart", ICONS.retry],
+  }[ix.phase];
+  let actionBtn = null;
+  if (control) {
+    const [text, action, icon] = control;
+    actionBtn = el("button", { type: "button", title: `${text} indexing`,
+      className: "phase-action" + (action === "resume" ? " resume" : "") });
+    actionBtn.innerHTML = icon; // static SVG, no user data
+    actionBtn.append(text);
+    actionBtn.onclick = async () => {
+      actionBtn.disabled = true; // pausing can take a moment while files in progress stop
+      try { await api(`/api/indexing/${action}`, {}); } catch (e) { toast(e.message, true); }
+      refreshSoon();
+    };
+  }
+  box.replaceChildren(el("div", { className: "phase" },
+    el("span", { className: `dot ${dot}` }), el("span", { className: "phase-label", textContent: label }), actionBtn));
+  if (ix.message) box.append(el("div", { className: "phase-msg", textContent: ix.message }));
+  // Progress of the first pass over all files (afterwards only changed files are processed).
+  if (ix.phase === "catching_up" && f.total) {
+    const done = Math.min(f.checked, f.total);
+    const pct = Math.floor((done / f.total) * 100);
+    box.append(el("div", { className: "progress", role: "progressbar",
+        ariaValueMin: "0", ariaValueMax: String(f.total), ariaValueNow: String(done) },
+      el("div", { className: "progress-bar" }, el("div", { style: `width:${pct}%` })),
+      el("div", { className: "progress-text" },
+        el("span", { textContent: `${fmt(done)} of ${plural(f.total, "file")} · ${pct}%` }),
+        el("span", { textContent: timeLeft(ix.seconds_left) }))));
+  }
+  if (ix.files) {
+    const counter = (n, l, cls = "") => el("div", { className: `counter ${cls}` },
+      el("div", { className: "n", textContent: fmt(n) }), el("div", { className: "l", textContent: l }));
+    box.append(el("div", { className: "counters" },
+      counter(f.checked, "checked"), counter(f.added, "new"), counter(f.updated, "updated"),
+      counter(f.removed, "removed"), counter(f.in_progress, "in progress"),
+      counter(f.failed, "failed", f.failed ? "bad" : "")));
+  }
+  if (ix.active && ix.active.length) {
+    box.append(el("ul", { className: "list" }, ...ix.active.map((a) => el("li", {},
+      el("span", { className: "spinner" }),
+      el("span", { className: "grow", textContent: a.path.split("/").pop(), title: a.path }),
+      el("span", { className: "muted", textContent: `${a.seconds}s` })))));
+  }
+  if (status.issues.length) {
+    box.append(collapsible("issues", plural(status.issues.length, "skipped file"),
+      el("ul", { className: "list" }, ...status.issues.map((i) => el("li", {},
+        el("span", { className: "grow", textContent: i.path, title: `${i.folder}/${i.path}` }),
+        el("span", { className: "reason", textContent: i.reason }))))));
+  }
+  if (ix.errors && ix.errors.length) {
+    box.append(collapsible("errors", plural(ix.errors.length, "recent error"),
+      el("ul", { className: "list" }, ...ix.errors.map((e) => el("li", {},
+        el("span", { className: "muted", textContent: new Date(e.time * 1000).toLocaleTimeString() }),
+        el("span", { className: "reason", textContent: e.message }))))));
+  }
+
+  renderFolders();
+  renderFolderFilter();
+  if (!lastResults) renderResults();
+  $("q").placeholder = status.model_ready
+    ? "Search your files…  (press / to focus)"
+    : "Loading search model… you can already type";
+}
+
+// ---------- folders ----------
+
+let confirming = null; // folder path awaiting remove confirmation
+
+function renderFolders() {
+  const box = $("folders");
+  box.replaceChildren();
+  if (!status.folders.length) {
+    box.append(el("div", { className: "phase-msg", textContent: "No folders yet." }));
+    return;
+  }
+  for (const f of status.folders) {
+    const remove = el("button", { className: "remove", textContent: "Remove", type: "button" });
+    remove.onclick = () => { confirming = f.path; renderFolders(); };
+    const parts = [plural(f.files, "file"), plural(f.chunks, "chunk")];
+    if (f.skipped) parts.push(`${fmt(f.skipped)} skipped`);
+    const node = el("div", { className: "folder" },
+      el("div", { className: "folder-top" },
+        el("span", { className: "folder-name", textContent: f.name, title: f.path }), remove),
+      el("div", { className: "folder-path", textContent: f.path }),
+      el("div", { className: "folder-stats", textContent: parts.join(" · ") }),
+      f.problem ? el("div", { className: "folder-problem", textContent: f.problem }) : null);
+    if (confirming === f.path) {
+      const yes = el("button", { className: "danger", textContent: "Remove", type: "button" });
+      const no = el("button", { textContent: "Cancel", type: "button" });
+      yes.onclick = () => removeFolder(f.path);
+      no.onclick = () => { confirming = null; renderFolders(); };
+      node.append(el("div", { className: "confirm" }, "Remove it and its index?", yes, no));
+    }
+    box.append(node);
+  }
+}
+
+function renderFolderFilter() {
+  const select = $("folder-filter");
+  const current = select.value;
+  const wanted = ["", ...status.folders.map((f) => f.path)];
+  const have = [...select.options].map((o) => o.value);
+  if (wanted.join("\n") === have.join("\n")) return;
+  select.replaceChildren(el("option", { value: "", textContent: "All folders" }),
+    ...status.folders.map((f) => el("option", { value: f.path, textContent: f.name, title: f.path })));
+  select.value = wanted.includes(current) ? current : "";
+}
+
+async function addFolder(path) {
+  try {
+    const res = await api("/api/folders", { path });
+    toast(`Added ${res.path} — indexing started`);
+    $("add-path").value = "";
+  } catch (e) { toast(e.message, true); }
+  refreshSoon();
+}
+
+async function removeFolder(path) {
+  confirming = null;
+  try {
+    await api("/api/folders/remove", { path });
+    toast("Folder removed");
+    lastResults = null;
+    runSearch(true); // same query, but that folder's results must go
+  } catch (e) { toast(e.message, true); }
+  refreshSoon();
+}
+
+$("pick").onclick = async () => {
+  const btn = $("pick");
+  btn.disabled = true;
+  btn.textContent = "Choose a folder in the dialog…";
+  try {
+    const res = await api("/api/folders/pick", {});
+    if (res.path) await addFolder(res.path);
+  } catch (e) { toast(e.message, true); }
+  finally { btn.disabled = false; btn.textContent = "Add folder…"; }
+};
+
+$("add-form").onsubmit = (e) => {
+  e.preventDefault();
+  const path = $("add-path").value.trim();
+  if (path) addFolder(path);
+};
+
+// ---------- wiring ----------
+
+$("search-form").onsubmit = (e) => { e.preventDefault(); scheduleSearch(0, true); };
+$("q").addEventListener("input", () => scheduleSearch());
+$("folder-filter").addEventListener("change", () => scheduleSearch(0));
+document.addEventListener("keydown", (e) => {
+  if (e.key === "/" && document.activeElement !== $("q") && document.activeElement.tagName !== "INPUT") {
+    e.preventDefault();
+    $("q").focus();
+  } else if (e.key === "Escape" && document.activeElement === $("q")) {
+    $("q").value = "";
+    runSearch();
+  }
+});
+
+// Searches are linkable: /?q=... (also lets you add Findling as a browser search engine).
+const initial = new URLSearchParams(location.search).get("q");
+if (initial) { $("q").value = initial; scheduleSearch(0, true); }
+$("q").addEventListener("input", () => {
+  const url = new URL(location.href);
+  const q = $("q").value.trim();
+  if (q) url.searchParams.set("q", q); else url.searchParams.delete("q");
+  history.replaceState(null, "", url);
+});
+
+// Coming back to the tab: refresh right away instead of after the long hidden delay.
+document.addEventListener("visibilitychange", () => { if (!document.hidden) refreshSoon(); });
+
+pollStatus();
+</script>
+</body>
+</html>

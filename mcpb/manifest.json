@@ -1,0 +1,71 @@
+{
+  "$schema": "https://raw.githubusercontent.com/anthropics/mcpb/main/schemas/mcpb-manifest-latest.schema.json",
+  "manifest_version": "0.3",
+  "name": "findling",
+  "display_name": "Findling local search",
+  "version": "0.3.0",
+  "description": "Search your local files by meaning and by exact words, with passages ready to cite.",
+  "long_description": "Connects Claude to Findling, a private search over folders on this Mac (documents, PDFs, web pages, notes, code). Results come grouped per file with their best passages, heading paths, pages and a link that shows each passage highlighted in your browser. Claude can also read on from a passage, open a section by name (\"§ 1599\"), and browse folders, files and sections.\n\nThe Findling web app must be running (in the Findling folder: `uv run findling`). This extension only forwards to it: the search model and the index stay in the app.",
+  "author": {
+    "name": "Cedric Fauth"
+  },
+  "icon": "icon.png",
+  "server": {
+    "type": "binary",
+    "entry_point": "launch.sh",
+    "mcp_config": {
+      "command": "/bin/sh",
+      "args": ["${__dirname}/launch.sh"],
+      "env": {
+        "FINDLING_DIR": "${user_config.findling_dir}",
+        "FINDLING_PORT": "${user_config.port}",
+        "FINDLING_UV": "${user_config.uv_path}"
+      }
+    }
+  },
+  "tools": [
+    {
+      "name": "search",
+      "description": "Hybrid search (by meaning and exact words) over the indexed folders, a folder or a file; results grouped per file with passages."
+    },
+    {
+      "name": "read",
+      "description": "Reads an indexed file around a passage or a section (e.g. \"§ 1599\"), with links to cite each section."
+    },
+    {
+      "name": "browse",
+      "description": "Lists the indexed folders, the files in a folder, or the sections of a file."
+    },
+    {
+      "name": "open",
+      "description": "Opens a file in the browser with the passage highlighted (Office files in their app)."
+    }
+  ],
+  "user_config": {
+    "findling_dir": {
+      "type": "directory",
+      "title": "Findling folder",
+      "description": "The Findling project folder (the one with pyproject.toml).",
+      "required": true
+    },
+    "port": {
+      "type": "number",
+      "title": "Port",
+      "description": "Port of the Findling web app (FINDLING_PORT).",
+      "default": 8765,
+      "min": 1,
+      "max": 65535
+    },
+    "uv_path": {
+      "type": "file",
+      "title": "uv program (optional)",
+      "description": "Only needed if uv isn't in a usual place (~/.local/bin, Homebrew, /usr/local/bin, ~/.cargo/bin).",
+      "default": ""
+    }
+  },
+  "compatibility": {
+    "platforms": ["darwin"]
+  },
+  "keywords": ["search", "rag", "local", "documents"],
+  "license": "Private"
+}

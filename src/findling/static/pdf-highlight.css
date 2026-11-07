@@ -1,0 +1,10 @@
+/* Findling highlights in the pdf.js text layer (its text is transparent). */
+.textLayer mark.findling-chunk,
+.textLayer mark.findling-word {
+  color: transparent;
+  padding: 0;
+  margin: 0;
+  border-radius: 0;
+}
+.textLayer mark.findling-chunk { background: rgba(255, 214, 10, 0.32); }
+.textLayer mark.findling-word { background: rgba(255, 140, 0, 0.55); }
