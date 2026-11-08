@@ -2,6 +2,7 @@
 
 import os
 import pathlib
+import sys
 import tomllib
 from dataclasses import dataclass
 
@@ -11,7 +12,12 @@ from . import extensions
 
 CONFIG_PATH = pathlib.Path(
     os.environ.get("FINDLING_CONFIG")
-    or pathlib.Path.home() / "Library/Application Support/Findling/folders.toml"
+    or (
+        pathlib.Path.home() / "Library/Application Support/Findling/folders.toml"
+        if sys.platform == "darwin"
+        else pathlib.Path(os.environ.get("XDG_DATA_HOME") or pathlib.Path.home() / ".local/share")
+        / "findling/folders.toml"
+    )
 )
 
 # Changing the model (or any chunking setting below) reprocesses all files automatically.

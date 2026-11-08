@@ -7,7 +7,8 @@ Forwards tool listings and calls to the running web app (findling) at
 http://127.0.0.1:$FINDLING_PORT/mcp (or $FINDLING_MCP_URL). It doesn't load the model
 or open the index itself, so it starts in about a second and shares the web app's
 live index. If the web app isn't running, it starts it in the background (log in
-~/Library/Logs/Findling/findling.log); it keeps running after the client quits.
+~/Library/Logs/Findling/findling.log, on Linux ~/.local/state/findling/findling.log);
+it keeps running after the client quits.
 """
 
 from __future__ import annotations
@@ -38,7 +39,12 @@ PORT = int(os.environ.get("FINDLING_PORT") or "8765")
 URL = os.environ.get("FINDLING_MCP_URL") or f"http://127.0.0.1:{PORT}/mcp"
 TIMEOUT = 120  # seconds; a search takes well under that, even on old Macs
 STARTUP_TIMEOUT = 120  # seconds to wait for a starting web app (model load: ~20 s)
-LOG_PATH = pathlib.Path.home() / "Library/Logs/Findling/findling.log"
+LOG_PATH = (
+    pathlib.Path.home() / "Library/Logs/Findling/findling.log"
+    if sys.platform == "darwin"
+    else pathlib.Path(os.environ.get("XDG_STATE_HOME") or pathlib.Path.home() / ".local/state")
+    / "findling/findling.log"
+)
 LOCK_PATH = LOG_PATH.with_name("findling.lock")
 SERVER_COMMAND = "-m findling.server"  # how _spawn starts it (see _restart_if_outdated)
 VERSION = importlib.metadata.version("findling")
