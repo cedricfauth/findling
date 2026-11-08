@@ -1,6 +1,6 @@
 """Findling web app: search box, folder picker and live indexing status.
 
-    uv run findling            then open http://127.0.0.1:8765
+    findling            then open http://127.0.0.1:8765
 
 The server answers immediately; the embedding model loads in the background
 (search works once it's loaded), then live indexing starts.
@@ -12,14 +12,17 @@ import asyncio
 import codecs
 import functools
 import hmac
+import importlib.metadata
 import json
 import logging
 import os
 import pathlib
 import re
 import secrets
+import socket
 import sqlite3
 import subprocess
+import sys
 import threading
 import time
 import urllib.parse
@@ -49,6 +52,7 @@ ALLOWED_HOSTS = {f"127.0.0.1:{PORT}", f"localhost:{PORT}"}
 ALLOWED_ORIGINS = {f"http://{h}" for h in ALLOWED_HOSTS}
 STATIC_DIR = pathlib.Path(__file__).parent / "static"
 HTML_EXTS = {"html", "htm", "xhtml"}
+VERSION = importlib.metadata.version("findling")
 
 
 class State:
@@ -181,6 +185,8 @@ async def status() -> dict:
         config = cfg.load_config(check_folders=False)
     except cfg.ConfigError as e:
         return {
+            "version": VERSION,
+            "pid": os.getpid(),  # so findling-mcp can restart an outdated server
             "model_ready": state.model_ready,
             "uptime": time.time() - state.started_at,
             "indexing": {"phase": "error", "message": str(e)},
@@ -209,6 +215,8 @@ async def status() -> dict:
     else:
         indexing = state.indexer.status()
     return {
+        "version": VERSION,
+        "pid": os.getpid(),
         "model_ready": state.model_ready,
         "uptime": time.time() - state.started_at,
         "indexing": indexing,
@@ -896,8 +904,16 @@ async def open_file(body: OpenBody) -> dict:
 
 def main() -> None:
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s: %(message)s")
-    print(f"Findling: http://{HOST}:{PORT}")
-    uvicorn.run(app, host=HOST, port=PORT, log_level="warning")
+    # Take the port before uvicorn starts the app: it runs the lifespan (model load,
+    # then indexing) before binding, so a second Findling would start indexing too.
+    sock = socket.socket()
+    sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+    try:
+        sock.bind((HOST, PORT))
+    except OSError as e:
+        sys.exit(f"Findling: can't use port {PORT} ({e.strerror}). Is Findling already running? http://{HOST}:{PORT}")
+    print(f"Findling: http://{HOST}:{PORT}", flush=True)
+    uvicorn.Server(uvicorn.Config(app, host=HOST, port=PORT, log_level="warning")).run(sockets=[sock])
 
 
 if __name__ == "__main__":

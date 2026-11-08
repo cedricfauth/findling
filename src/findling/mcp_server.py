@@ -87,7 +87,7 @@ def create_server(backend: Backend | None) -> MCPServer:
 
     def require_backend() -> Backend:
         if backend is None:
-            raise ToolError("Findling isn't running. Start it with: uv run findling")
+            raise ToolError("Findling isn't running. Start it with: findling")
         return backend
 
     @mcp.tool(annotations=ANNOTATIONS, title="Search local files")

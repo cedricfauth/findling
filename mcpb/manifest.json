@@ -3,9 +3,9 @@
   "manifest_version": "0.3",
   "name": "findling",
   "display_name": "Findling local search",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "description": "Search your local files by meaning and by exact words, with passages ready to cite.",
-  "long_description": "Connects Claude to Findling, a private search over folders on this Mac (documents, PDFs, web pages, notes, code). Results come grouped per file with their best passages, heading paths, pages and a link that shows each passage highlighted in your browser. Claude can also read on from a passage, open a section by name (\"§ 1599\"), and browse folders, files and sections.\n\nThe Findling web app must be running (in the Findling folder: `uv run findling`). This extension only forwards to it: the search model and the index stay in the app.",
+  "long_description": "Connects Claude to Findling, a private search over folders on this Mac (documents, PDFs, web pages, notes, code). Results come grouped per file with their best passages, heading paths, pages and a link that shows each passage highlighted in your browser. Claude can also read on from a passage, open a section by name (\"§ 1599\"), and browse folders, files and sections.\n\nInstall Findling first, in Terminal: `uv tool install git+https://github.com/CedricFauth/findling`. This extension starts the Findling web app in the background when needed (it keeps running after Claude quits, until you log out) and forwards to it: the search model and the index stay in the app. Add folders at http://127.0.0.1:8765.",
   "author": {
     "name": "Cedric Fauth"
   },
@@ -17,9 +17,7 @@
       "command": "/bin/sh",
       "args": ["${__dirname}/launch.sh"],
       "env": {
-        "FINDLING_DIR": "${user_config.findling_dir}",
-        "FINDLING_PORT": "${user_config.port}",
-        "FINDLING_UV": "${user_config.uv_path}"
+        "FINDLING_PORT": "${user_config.port}"
       }
     }
   },
@@ -42,12 +40,6 @@
     }
   ],
   "user_config": {
-    "findling_dir": {
-      "type": "directory",
-      "title": "Findling folder",
-      "description": "The Findling project folder (the one with pyproject.toml).",
-      "required": true
-    },
     "port": {
       "type": "number",
       "title": "Port",
@@ -55,12 +47,6 @@
       "default": 8765,
       "min": 1,
       "max": 65535
-    },
-    "uv_path": {
-      "type": "file",
-      "title": "uv program (optional)",
-      "description": "Only needed if uv isn't in a usual place (~/.local/bin, Homebrew, /usr/local/bin, ~/.cargo/bin).",
-      "default": ""
     }
   },
   "compatibility": {
