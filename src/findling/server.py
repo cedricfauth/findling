@@ -19,6 +19,7 @@ import os
 import pathlib
 import re
 import secrets
+import signal
 import socket
 import sqlite3
 import subprocess
@@ -689,6 +690,14 @@ async def pause_indexing() -> dict:
 @app.post("/api/indexing/resume")
 async def resume_indexing() -> dict:
     await _require_indexer().resume()
+    return {"ok": True}
+
+
+@app.post("/api/quit")
+async def quit_app() -> dict:
+    """Stop Findling like Ctrl-C does: indexing stops cleanly, finished files stay indexed."""
+    # Signal a moment later, so this response still reaches the page.
+    asyncio.get_running_loop().call_later(0.2, os.kill, os.getpid(), signal.SIGTERM)
     return {"ok": True}
 
 

@@ -189,6 +189,10 @@
   }
   .full { width: 100%; margin-top: 4px; }
 
+  #stopped {
+    position: fixed; inset: 0; display: grid; place-items: center;
+    background: var(--bg); color: var(--text); font-size: 18px;
+  }
   #toast {
     position: fixed; left: 50%; bottom: 24px; transform: translateX(-50%) translateY(20px);
     background: var(--text); color: var(--bg); padding: 10px 16px; border-radius: 8px; font-size: 14px;
@@ -207,6 +211,7 @@
 <body>
 <header>
   <div class="brand"><span>Find</span>ling</div>
+  <button id="quit" type="button" title="Stop the Findling app. Indexing picks up where it left off next time.">Quit Findling</button>
 </header>
 
 <main>
@@ -506,6 +511,7 @@ const ICONS = {
 // Poll often only while something is happening; back off when idle or hidden.
 const BUSY_PHASES = new Set(["starting", "loading_model", "catching_up", "updating"]);
 let pollTimer;
+let stopped = false; // after Quit: no more status polls
 
 function nextPollDelay() {
   if (document.hidden) return 30000;
@@ -521,6 +527,7 @@ function refreshSoon() {
 
 async function pollStatus() {
   clearTimeout(pollTimer);
+  if (stopped) return;
   try {
     const wasReady = status && status.model_ready;
     const next = await api("/api/status");
@@ -709,6 +716,14 @@ $("open-config").addEventListener("click", async () => {
   try {
     await api("/api/config/open", {});
     toast("Opened the settings file. Restart Findling after saving changes.");
+  } catch (e) { toast(e.message, true); }
+});
+$("quit").addEventListener("click", async () => {
+  try {
+    await api("/api/quit", {});
+    stopped = true; // it's gone on purpose, not "not reachable"
+    clearTimeout(pollTimer);
+    document.body.append(el("div", { id: "stopped", textContent: "Findling has stopped. You can close this tab." }));
   } catch (e) { toast(e.message, true); }
 });
 if (!IS_MAC) { // the folder dialog is macOS only
