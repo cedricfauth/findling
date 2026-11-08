@@ -153,7 +153,7 @@ def load_config(path: pathlib.Path = CONFIG_PATH, *, check_folders: bool = True)
     """check_folders=False skips the disk checks (for searching while a drive is away).
     Raises ConfigError."""
     try:
-        data = tomllib.loads(path.read_text())
+        data = tomllib.loads(path.read_text(encoding="utf-8"))
     except FileNotFoundError:
         data = {}  # first start: no folders yet (adding one in the web app creates the file)
     except (OSError, tomllib.TOMLDecodeError) as e:
@@ -195,7 +195,7 @@ def state_path(db_path: pathlib.Path) -> pathlib.Path:
 def save_folders(folders: list[str], path: pathlib.Path = CONFIG_PATH) -> None:
     """Replace the `folders` list in the config file, keeping everything else
     (comments, other settings). Any characters in paths are fine (e.g. "]")."""
-    doc = tomlkit.parse(path.read_text()) if path.exists() else tomlkit.document()
+    doc = tomlkit.parse(path.read_text(encoding="utf-8")) if path.exists() else tomlkit.document()
     array = tomlkit.array()
     for folder in folders:
         array.add_line(folder)
@@ -217,5 +217,5 @@ def save_folders(folders: list[str], path: pathlib.Path = CONFIG_PATH) -> None:
         raise ConfigError("Could not update the folder list in the config file.")
     path.parent.mkdir(parents=True, exist_ok=True)
     tmp = path.with_suffix(path.suffix + ".tmp")
-    tmp.write_text(new_text)
+    tmp.write_text(new_text, encoding="utf-8")
     tmp.replace(path)
