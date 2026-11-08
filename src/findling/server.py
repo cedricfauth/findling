@@ -75,14 +75,18 @@ async def _background_startup() -> None:
         from . import pipeline
         from . import searcher
 
-        pipeline.search_model()  # load the e5 model once; indexing shares it
+        pipeline.search_model()  # load the e5 model once (twice with a GPU: one for indexing)
         return pipeline, searcher
 
     try:
         state.pipeline, state.searcher = await asyncio.to_thread(load)
         state.model_ready = True
         state.model_loaded_at = time.time()
-        log.info("model ready after %.1fs", state.model_loaded_at - state.started_at)
+        log.info(
+            "model ready after %.1fs, indexing on %s",
+            state.model_loaded_at - state.started_at,
+            state.pipeline.DEVICE,
+        )
     except Exception as e:
         log.exception("failed to load the embedding model")
         state.model_error = str(e)
@@ -218,6 +222,7 @@ async def status() -> dict:
         "version": VERSION,
         "pid": os.getpid(),
         "model_ready": state.model_ready,
+        "device": state.pipeline.DEVICE if state.pipeline else None,  # where the indexer embeds
         "uptime": time.time() - state.started_at,
         "indexing": indexing,
         "folders": folders,

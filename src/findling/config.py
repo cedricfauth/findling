@@ -2,6 +2,7 @@
 
 import os
 import pathlib
+import platform
 import sys
 import tomllib
 from dataclasses import dataclass
@@ -35,6 +36,22 @@ MAX_TOKENS = 460
 # file at once; docling converts one at a time and the embedding model already uses
 # all cores, so the rest only wait while holding memory. 16 keeps embedding batches full.
 MAX_PARALLEL_FILES = 16
+
+
+def embed_device() -> str:
+    """Where the indexer computes embeddings: FINDLING_DEVICE if set (cpu, mps, cuda),
+    else the GPU if there is one, else the CPU."""
+    if device := os.environ.get("FINDLING_DEVICE"):
+        return device
+    import torch
+
+    if sys.platform == "darwin":
+        # Intel Macs stay on the CPU: MPS there means an AMD GPU, untested with torch 2.2.2.
+        if platform.machine() == "arm64" and torch.backends.mps.is_available():
+            return "mps"
+        return "cpu"
+    return "cuda" if torch.cuda.is_available() else "cpu"  # ROCm builds report as cuda too
+
 
 TABLE_NAME = "chunks"
 ISSUES_TABLE_NAME = "issues"  # skipped files and why

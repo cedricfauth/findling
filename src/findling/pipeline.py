@@ -176,15 +176,24 @@ SQLITE_DB = coco.ContextKey[sqlite.ManagedConnection]("sqlite_db")
 EMBEDDER = coco.ContextKey[SentenceTransformerEmbedder]("embedder")
 DOCLING = coco.ContextKey[DoclingTools]("docling")
 
-# One model instance per process, shared by indexing and the web server's search.
+# One model instance per process for indexing, on the GPU if there is one.
 # Loads lazily on first use (see search_model()).
-EMBEDDER_INSTANCE = SentenceTransformerEmbedder(cfg.EMBED_MODEL, device="cpu")
+DEVICE = cfg.embed_device()
+EMBEDDER_INSTANCE = SentenceTransformerEmbedder(cfg.EMBED_MODEL, device=DEVICE)
+# On the CPU, searches share the indexer's model. With a GPU they get their own CPU copy
+# (~275 MB): CocoIndex then is the only user of the GPU model, one batch at a time
+# (MPS isn't thread-safe), and a query never waits behind a batch.
+_QUERY_EMBEDDER = (
+    EMBEDDER_INSTANCE if DEVICE == "cpu" else SentenceTransformerEmbedder(cfg.EMBED_MODEL, device="cpu")
+)
 
 
 def search_model():
-    """The loaded SentenceTransformer behind EMBEDDER_INSTANCE (loads it if needed)."""
+    """The loaded SentenceTransformer for search queries. Also loads the indexer's
+    model (process_file relies on that)."""
     with _LOAD_LOCK:
-        return EMBEDDER_INSTANCE._get_model()
+        EMBEDDER_INSTANCE._get_model()
+        return _QUERY_EMBEDDER._get_model()
 
 
 @coco.lifespan
