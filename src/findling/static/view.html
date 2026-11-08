@@ -157,6 +157,7 @@ async function main() {
   $("path").textContent = path;
   $("open").onclick = () => openFile(false);
   $("reveal").onclick = () => openFile(true);
+  if (!/Mac/.test(navigator.platform)) $("reveal").textContent = "Show in folder";
   try { if (localStorage.getItem("findling.wrap") === "1") $("code").classList.add("wrap"); } catch {}
   $("wrap").onclick = () => {
     const on = $("code").classList.toggle("wrap");

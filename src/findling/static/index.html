@@ -277,6 +277,7 @@ async function api(path, body) {
 }
 
 const fmt = (n) => n.toLocaleString();
+const IS_MAC = /Mac/.test(navigator.platform); // the server only serves this machine, so it's its OS too
 const plural = (n, word) => `${fmt(n)} ${word}${n === 1 ? "" : "s"}`;
 const CODE_TYPES = new Set(["py","js","ts","tsx","jsx","java","go","rs","c","h","cpp","cs","rb","php","swift",
   "kt","scala","sh","sql","json","yaml","yml","toml","css","scss","html","xml","lua","r","dart","vue","svelte"]);
@@ -437,7 +438,7 @@ function renderMatch(r, m, isCode) {
 function renderResult(r) {
   const folderName = r.folder.split("/").filter(Boolean).pop() || r.folder;
   const isCode = CODE_TYPES.has(r.file_type);
-  const revealBtn = el("button", { textContent: "Show in Finder", type: "button", title: r.full_path });
+  const revealBtn = el("button", { textContent: IS_MAC ? "Show in Finder" : "Show in folder", type: "button", title: r.full_path });
   revealBtn.onclick = () => openFile(r, true);
   // Files the browser can show get a View button on each passage instead (renderMatch).
   // The rest (Word, PowerPoint, Excel) get one here that opens them in their app.
@@ -702,6 +703,10 @@ $("pick").onclick = async () => {
   } catch (e) { toast(e.message, true); }
   finally { btn.disabled = false; btn.textContent = "Add folder…"; }
 };
+if (!IS_MAC) { // the folder dialog is macOS only
+  $("pick").remove();
+  $("add-path").placeholder = "Paste a folder path, e.g. ~/Documents";
+}
 
 $("add-form").onsubmit = (e) => {
   e.preventDefault();

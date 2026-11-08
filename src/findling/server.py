@@ -563,9 +563,13 @@ class _McpBackend:
         return mcp_server.Opened(file=paths.full(folder, rel), opened_in="browser" if url else "app", url=url)
 
 
+# On Linux /usr/bin/open may be something else entirely (Debian: openvt).
+OPEN = "open" if sys.platform == "darwin" else "xdg-open"
+
+
 async def _open(target: str) -> None:
-    """macOS `open`: URLs in the default browser, files in their app."""
-    proc = await asyncio.create_subprocess_exec("open", target, stderr=subprocess.PIPE)
+    """URLs in the default browser, files in their app."""
+    proc = await asyncio.create_subprocess_exec(OPEN, target, stderr=subprocess.PIPE)
     _, stderr = await proc.communicate()
     if proc.returncode != 0:
         raise AgentError(stderr.decode().strip() or f"Could not open {target}.")
@@ -594,6 +598,8 @@ class FolderBody(BaseModel):
 @app.post("/api/folders/pick")
 async def pick_folder() -> dict:
     """Open the native macOS "Choose Folder" dialog on this Mac."""
+    if sys.platform != "darwin":
+        raise HTTPException(501, "The folder dialog needs macOS. Paste the folder's path instead.")
     script = [
         "-e", "activate",
         "-e", 'POSIX path of (choose folder with prompt "Choose a folder to index")',
@@ -620,7 +626,7 @@ async def add_folder(body: FolderBody) -> dict:
     indexer = _require_indexer()
     folder = pathlib.Path(body.path.strip()).expanduser()
     if not folder.is_absolute():
-        raise HTTPException(400, "Please give a full path, e.g. /Users/you/Documents.")
+        raise HTTPException(400, "Please give a full path, e.g. ~/Documents.")
     folder = folder.resolve()
     if problem := cfg.folder_problem(folder):
         raise HTTPException(400, problem)
@@ -888,13 +894,16 @@ async def show_file(fid: str, path: str, chunk: str = "", q: str = "") -> Redire
 class OpenBody(BaseModel):
     folder: str
     path: str
-    reveal: bool = False  # True: show in Finder instead of opening
+    reveal: bool = False  # True: show in Finder (elsewhere: open its folder) instead of opening
 
 
 @app.post("/api/open")
 async def open_file(body: OpenBody) -> dict:
     target = _indexed_file(body.folder, body.path)
-    args = ["open", "-R", str(target)] if body.reveal else ["open", str(target)]
+    if body.reveal and OPEN == "xdg-open":  # xdg-open can't select a file in its folder
+        args = [OPEN, str(target.parent)]
+    else:
+        args = [OPEN, "-R", str(target)] if body.reveal else [OPEN, str(target)]
     proc = await asyncio.create_subprocess_exec(*args, stderr=subprocess.PIPE)
     _, stderr = await proc.communicate()
     if proc.returncode != 0:

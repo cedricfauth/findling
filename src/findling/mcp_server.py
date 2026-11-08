@@ -191,7 +191,7 @@ def create_server(backend: Backend | None) -> MCPServer:
             Field(max_length=1000, description="Words to highlight too, usually the search query."),
         ] = "",
     ) -> Annotated[CallToolResult, Opened]:
-        """Open a file on the user's Mac with the passage highlighted: PDFs, web pages,
+        """Open a file on the user's computer with the passage highlighted: PDFs, web pages,
         text and code in their browser, Word/PowerPoint/Excel files in their app. Use it
         only when the user asks to see a passage or file."""
         return await _call(require_backend().open(file.strip(), chunk, query.strip()))

@@ -91,3 +91,28 @@ def test_link_key_survives_restarts(setup):
     key_file.unlink()  # deleting the key makes old links stop working
     server._url_key.cache_clear()
     assert server._folder_id(folder) != fid
+
+
+@pytest.mark.parametrize("opener, reveal, expected", [
+    ("open", False, ["open", "{f}/x.pdf"]),
+    ("open", True, ["open", "-R", "{f}/x.pdf"]),
+    ("xdg-open", False, ["xdg-open", "{f}/x.pdf"]),
+    ("xdg-open", True, ["xdg-open", "{f}"]),
+])
+def test_open_and_reveal_commands(setup, monkeypatch, opener, reveal, expected):
+    folder, _ = setup
+    calls = []
+
+    async def fake_exec(*args, **kwargs):
+        calls.append(list(args))
+        class Done:
+            returncode = 0
+            async def communicate(self):
+                return b"", b""
+        return Done()
+
+    monkeypatch.setattr(server, "OPEN", opener)
+    monkeypatch.setattr(server.asyncio, "create_subprocess_exec", fake_exec)
+    r = client().post("/api/open", json={"folder": folder, "path": "x.pdf", "reveal": reveal})
+    assert r.status_code == 200
+    assert calls == [[a.format(f=folder) for a in expected]]
