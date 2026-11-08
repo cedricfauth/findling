@@ -593,8 +593,11 @@ function renderStatus() {
   if (ix.files) {
     const counter = (n, l, cls = "") => el("div", { className: `counter ${cls}` },
       el("div", { className: "n", textContent: fmt(n) }), el("div", { className: "l", textContent: l }));
+    // Not f.unchanged: that one counts every hourly rescan again, "checked" doesn't.
+    const unchanged = Math.max(0, f.checked - f.added - f.updated - f.failed);
     box.append(el("div", { className: "counters" },
-      counter(f.checked, "checked"), counter(f.added, "new"), counter(f.updated, "updated"),
+      counter(f.checked, "checked"), counter(unchanged, "unchanged"), counter(f.added, "new"),
+      counter(f.updated, "updated"),
       counter(f.removed, "removed"), counter(f.in_progress, "in progress"),
       counter(f.failed, "failed", f.failed ? "bad" : "")));
   }
