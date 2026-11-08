@@ -31,24 +31,27 @@
 
 ## Why Findling?
 
-I wanted to ask Claude questions about German law and get answers backed by the actual
-text: the section of the BGB, the court decision, the paragraph number to cite. Uploading
-files to a chat works for a few documents, but not for a folder of laws and thousands of
-decisions. Findling indexes your folders on your own computer and lets the assistant
-search them, read the passages it needs and link every quote back to the source, so you
-can check it with one click.
+**Findling lets your AI assistant work with your own files.** Pick the folders you care
+about (documents, PDFs, web pages, notes), then just ask your assistant, for example
+Claude, a question. It searches those folders, reads the passages that matter and answers
+with quotes and links back to the source, so you can check every claim with one click.
+You don't need to know the exact words or where a file is: asking *how much notice do I
+have to give on my flat?* finds the right clause in your rental contract, even if it
+never uses the word "notice".
 
-It finds things by meaning, not just by exact words: asking *how much notice do I have
-to give on my flat?* finds the right clause in your rental contract even if it never
-uses the word "notice". I run it on an older Intel Mac with about 28,000 passages of
-laws and court decisions.
+### Why not just upload the files to the chat?
 
-Compared with uploading files to a chat:
+That works for a handful of documents, but not for the folders you actually keep:
 
-- It works with thousands of files, and the assistant only reads the passages that matter.
-- Your files stay on your computer. The assistant only sees the passages it reads (with a
-  local model, nothing leaves your computer at all).
-- It notices new and changed files by itself, so you don't upload again for every chat.
+| | Uploading files to a chat | Findling |
+|---|---|---|
+| **How much** | A chat only holds so much: a few documents | Thousands of files across all your folders |
+| **Finding the right file** | You pick the files before you ask | Findling finds them for you |
+| **Answer quality** | The assistant wades through everything you uploaded on every question and can miss the one detail that matters | The assistant only reads the passages that are relevant |
+| **Speed** | The more you upload, the slower the chat and the sooner it hits its limits | A search takes about a second, so the assistant can look things up as often as it needs |
+| **Keeping up to date** | Upload again for every new chat and after every change | Findling notices new and changed files by itself |
+| **Privacy** | Whole files leave your computer | Files stay on your computer; the assistant only sees the passages it needs |
+| **Checking answers** | Hard to tell where in a file a quote came from | Every quote links to the exact spot, highlighted |
 
 Findling also works on its own, as a search page in your browser: type what you're
 looking for, see the matching passages, and open each file right at that spot,
