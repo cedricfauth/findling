@@ -5,6 +5,9 @@
 */
 (function () {
   "use strict";
+  // No JavaScript from PDFs (forms): pdf.sandbox.mjs and quickjs-eval.* aren't shipped.
+  document.addEventListener("webviewerloaded", () =>
+    window.PDFViewerApplicationOptions.setAll({ disablePreferences: true, enableScripting: false }));
   const params = new URLSearchParams(location.search);
   const folder = params.get("folder"), path = params.get("path");
   if (!folder || !path) return;

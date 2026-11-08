@@ -154,4 +154,5 @@ busy. Add a forced exit after a few seconds in case the indexer doesn't stop in 
   `pdf-highlight.js`, the viewers, the search page's typing debounce) has no automated
   tests yet. Add some, e.g. with jsdom and pdf.js in Node.
 - **pdf.js updates:** `src/findling/static/pdfjs` is a vendored copy (v6.4.299, legacy build) with
-  three added lines in `web/viewer.html`. A small script to update it would keep those.
+  three added lines in `web/viewer.html`, trimmed as described in `development.md`. A small
+  script to update it would redo both.

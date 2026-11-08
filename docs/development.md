@@ -20,7 +20,9 @@ The View links (see [Using Findling](usage.md#web-app)) use these files:
 
 - PDFs: the bundled pdf.js in `src/findling/static/pdfjs` (legacy build v6.4.299).
   Findling's add-on is `src/findling/static/pdf-highlight.js`, loaded by three added lines
-  in `pdfjs/web/viewer.html`; keep them when updating pdf.js.
+  in `pdfjs/web/viewer.html`; keep them when updating pdf.js. The copy is trimmed: only
+  the `de` and `en-US` translations (listed in `web/locale/locale.json`), and no
+  `build/pdf.sandbox.mjs` or `web/wasm/quickjs-eval.*` (the add-on turns off JavaScript in PDFs).
 - HTML pages: the server adds `src/findling/static/highlight.js` to the page.
 - Code and text: `src/findling/static/view.html`.
 

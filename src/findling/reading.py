@@ -86,9 +86,6 @@ class BrowseResult(BaseModel):
     next_offset: int | None = Field(None, description="Pass as `offset` to get the next entries.")
 
 
-# (folder, path, chunk) -> URL showing that chunk highlighted
-Link = Callable[[str, str, int], str | None]
-
 # ---------------------------------------------------------------------------
 # Chunks of a file
 # ---------------------------------------------------------------------------

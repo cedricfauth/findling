@@ -239,7 +239,6 @@ class ChunkRow:
     headings: str  # heading path, " > "-joined ("" for code / plain text)
     page: int  # 0 if not applicable
     text: str  # raw chunk text
-    embedded_text: str  # exactly what was embedded (minus the e5 prefix)
     embedding: Annotated[NDArray, EMBEDDER]
 
 
@@ -460,16 +459,15 @@ async def _process_file_body(
     if not kept:  # e.g. only whitespace
         skip("no text found")
         return
-    embedded_texts = [_embedding_input(rel_path, c) for c in kept]
 
     embedder = coco.use_context(EMBEDDER)
     # The embedder loads its model lazily on first use. Do that under the load lock:
     # importing transformers while docling loads in another thread breaks imports.
     await asyncio.to_thread(search_model)
     # Concurrent calls get batched by the embedder.
-    vectors = await asyncio.gather(*(embedder.embed(t) for t in embedded_texts))
+    vectors = await asyncio.gather(*(embedder.embed(_embedding_input(rel_path, c)) for c in kept))
 
-    for i, (chunk, embedded, vector) in enumerate(zip(kept, embedded_texts, vectors)):
+    for i, (chunk, vector) in enumerate(zip(kept, vectors)):
         table.declare_row(
             row=ChunkRow(
                 folder=folder,
@@ -479,7 +477,6 @@ async def _process_file_body(
                 headings=" > ".join(chunk.headings),
                 page=chunk.page,
                 text=chunk.text,
-                embedded_text=embedded.removeprefix(cfg.PASSAGE_PREFIX),
                 embedding=vector,
             )
         )
