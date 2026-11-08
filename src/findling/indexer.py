@@ -321,7 +321,7 @@ def _indexed_paths(db_path: pathlib.Path, folders: list[str]) -> set[tuple[str, 
     if not db_path.exists() or not folders:
         return set()
     marks = ",".join("?" * len(folders))
-    db = sqlite3.connect(f"file:{db_path}?mode=ro", uri=True)
+    db = sqlite3.connect(f"{db_path.as_uri()}?mode=ro", uri=True)
     try:
         return set(db.execute(
             f"SELECT folder, path FROM {cfg.TABLE_NAME} WHERE folder IN ({marks})"

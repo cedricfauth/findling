@@ -105,7 +105,7 @@ class Chunk:
 def open_index(db_path) -> sqlite3.Connection:
     if not db_path.exists():
         raise AgentError("Nothing is indexed yet. Add folders in Findling's web app.")
-    return sqlite3.connect(f"file:{db_path}?mode=ro", uri=True, check_same_thread=False)
+    return sqlite3.connect(f"{db_path.as_uri()}?mode=ro", uri=True, check_same_thread=False)
 
 
 def load_chunks(db: sqlite3.Connection, folder: str, path: str) -> list[Chunk]:

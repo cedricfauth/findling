@@ -333,7 +333,7 @@ def open_db(db_path: pathlib.Path) -> sqlite3.Connection | None:
     """Read-only connection with sqlite-vec loaded, or None if there's no index yet."""
     if not db_path.exists():
         return None
-    db = sqlite3.connect(f"file:{db_path}?mode=ro", uri=True, check_same_thread=False)
+    db = sqlite3.connect(f"{db_path.as_uri()}?mode=ro", uri=True, check_same_thread=False)
     db.enable_load_extension(True)
     sqlite_vec.load(db)
     db.enable_load_extension(False)

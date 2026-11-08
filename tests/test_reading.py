@@ -202,3 +202,15 @@ def test_list_dir():
     assert [f.file for f in files] == ["/x/urteile/top.html"]
     dirs, files = reading.list_dir(rows[:2], "/x/urteile", "bgh", "name", "B.HTML")
     assert dirs == [] and [f.file for f in files] == ["/x/urteile/bgh/b.html"]
+
+
+def test_open_index_in_folder_with_url_characters(tmp_path):
+    db_path = tmp_path / "a#b?c" / "findling.db"
+    db_path.parent.mkdir()
+    with sqlite3.connect(db_path) as setup:
+        setup.execute("CREATE TABLE chunks (folder TEXT, path TEXT)")
+        setup.executemany("INSERT INTO chunks VALUES (?, ?)", ROWS)
+    db = reading.open_index(db_path)
+    assert db.execute("SELECT COUNT(*) FROM chunks").fetchone()[0] == len(ROWS)
+    with pytest.raises(sqlite3.OperationalError, match="readonly"):
+        db.execute("DELETE FROM chunks")

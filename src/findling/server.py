@@ -157,7 +157,7 @@ def _folder_stats(db_path: pathlib.Path) -> tuple[dict, dict, list]:
     """Per-folder file/chunk counts and skipped files, straight from the index."""
     if not db_path.exists():
         return {}, {}, []
-    db = sqlite3.connect(f"file:{db_path}?mode=ro", uri=True)
+    db = sqlite3.connect(f"{db_path.as_uri()}?mode=ro", uri=True)
     try:
         counts = {
             folder: (files, chunks)
@@ -775,7 +775,7 @@ def _chunk_info(db_path: pathlib.Path, folder: str, path: str, chunk: int | None
 
     text, page = None, 0
     if chunk is not None and db_path.exists():
-        db = sqlite3.connect(f"file:{db_path}?mode=ro", uri=True)
+        db = sqlite3.connect(f"{db_path.as_uri()}?mode=ro", uri=True)
         try:
             row = db.execute(
                 f"SELECT text, page FROM {cfg.TABLE_NAME} WHERE folder = ? AND path = ? AND chunk_index = ?",
