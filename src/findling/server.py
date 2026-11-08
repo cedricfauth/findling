@@ -657,6 +657,22 @@ async def remove_folder(body: FolderBody) -> dict:
     return {"ok": True}
 
 
+@app.post("/api/config/open")
+async def open_config() -> dict:
+    """Open folders.toml in a text editor. Changes apply after restarting Findling."""
+    try:
+        await asyncio.to_thread(cfg.ensure_settings_listed)
+    except cfg.ConfigError as e:
+        log.warning("could not add the ocr setting to %s: %s", cfg.CONFIG_PATH, e)  # open it anyway, to fix it
+    # macOS: -t opens the default text editor (.toml often has no app of its own).
+    args = [OPEN, "-t", str(cfg.CONFIG_PATH)] if OPEN == "open" else [OPEN, str(cfg.CONFIG_PATH)]
+    proc = await asyncio.create_subprocess_exec(*args, stderr=subprocess.PIPE)
+    _, stderr = await proc.communicate()
+    if proc.returncode != 0:
+        raise HTTPException(500, stderr.decode().strip() or "Could not open the config file.")
+    return {"ok": True, "path": str(cfg.CONFIG_PATH)}
+
+
 @app.post("/api/indexing/restart")
 async def restart_indexing() -> dict:
     """E.g. after reconnecting a drive that paused indexing."""

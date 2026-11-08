@@ -136,6 +136,7 @@ class Config:
     max_file_bytes: int
     db_path: pathlib.Path
     extensions: tuple[str, ...] = ()  # source-specific add-ons, see extensions/__init__.py
+    ocr: bool = False  # read text from scanned PDF pages (much slower indexing)
 
 
 def folder_problem(folder: pathlib.Path) -> str | None:
@@ -201,12 +202,16 @@ def load_config(path: pathlib.Path = CONFIG_PATH, *, check_folders: bool = True)
         extensions.load(names)
     except ValueError as e:
         raise ConfigError(f"{e}. Fix {path}.") from None
+    ocr = data.get("ocr", False)
+    if not isinstance(ocr, bool):
+        raise ConfigError(f"ocr must be true or false. Fix {path}.")
     return Config(
         folders=tuple(folders),
         exclude=tuple(data.get("exclude", [])),
         max_file_bytes=int(float(data.get("max_file_mb", 50)) * 1024 * 1024),
         db_path=db_path,
         extensions=names,
+        ocr=ocr,
     )
 
 
@@ -238,7 +243,31 @@ def save_folders(folders: list[str], path: pathlib.Path = CONFIG_PATH) -> None:
     new_text = tomlkit.dumps(doc)
     if tomllib.loads(new_text).get("folders") != folders:  # never write a broken config
         raise ConfigError("Could not update the folder list in the config file.")
+    _write(path, new_text)
+
+
+def ensure_settings_listed(path: pathlib.Path = CONFIG_PATH) -> None:
+    """Create the config file if needed and add the `ocr` setting (off) if it's
+    missing, so people opening the file see it. Keeps everything else."""
+    try:
+        doc = tomlkit.parse(path.read_text(encoding="utf-8")) if path.exists() else tomlkit.document()
+    except (OSError, tomlkit.exceptions.ParseError) as e:
+        raise ConfigError(f"Cannot read {path}: {e}") from None
+    if "ocr" in doc:
+        return
+    if doc.body:
+        doc.add(tomlkit.nl())
+    doc.add(tomlkit.comment("Read text from scanned PDF pages (true/false). Indexing gets much"))
+    doc.add(tomlkit.comment("slower. Restart Findling after changing it."))
+    doc["ocr"] = False
+    new_text = tomlkit.dumps(doc)
+    if tomllib.loads(new_text).get("ocr") is not False:  # never write a broken config
+        raise ConfigError("Could not add the ocr setting to the config file.")
+    _write(path, new_text)
+
+
+def _write(path: pathlib.Path, text: str) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     tmp = path.with_suffix(path.suffix + ".tmp")
-    tmp.write_text(new_text, encoding="utf-8")
+    tmp.write_text(text, encoding="utf-8")
     tmp.replace(path)

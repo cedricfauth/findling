@@ -147,7 +147,7 @@ Version 0.1.0, the first public release. Known limits:
 
 - GPU indexing hasn't been tested on real hardware yet. If it causes trouble, set
   `FINDLING_DEVICE=cpu` and open an issue.
-- Scanned PDFs and images yield no text (no OCR).
+- Images yield no text. Scanned PDFs need [OCR switched on](docs/configuration.md#ocr) (off by default).
 - No Windows support yet.
 
 Ideas for later are in [docs/IMPROVEMENTS.md](docs/IMPROVEMENTS.md).

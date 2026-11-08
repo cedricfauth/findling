@@ -30,7 +30,18 @@ server again. On macOS:
 rm ~/Library/Application\ Support/Findling/findling.db*
 ```
 
-OCR is off, so scanned PDFs and images yield no text.
+## OCR
+
+Scanned PDFs yield no text unless OCR is on. Click **Edit settings file** in the web app
+(it adds the setting if it's missing), set
+
+```toml
+ocr = true
+```
+
+and restart Findling. Indexing PDFs gets much slower; switching OCR on or off reprocesses
+only PDFs. docling picks the OCR engine: Apple's Vision framework on macOS, RapidOCR on
+Linux. Images (.png, .jpg, …) are not indexed either way.
 
 ## Linux
 

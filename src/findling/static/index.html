@@ -182,6 +182,7 @@
   .confirm button { font-size: 12px; padding: 2px 8px; }
   .confirm .danger { background: var(--bad); border-color: var(--bad); color: #fff; }
   .add-row { display: flex; gap: 6px; margin-top: 12px; }
+  #open-config { margin-top: 10px; font-size: 13px; }
   .add-row input {
     flex: 1; min-width: 0; padding: 6px 10px; border-radius: 8px; border: 1px solid var(--border);
     background: var(--surface); font-size: 13px;
@@ -231,6 +232,7 @@
         <input id="add-path" placeholder="or paste a path, e.g. ~/Documents">
         <button type="submit">Add</button>
       </form>
+      <button class="link" id="open-config" type="button" title="folders.toml: folders, OCR and other settings">Edit settings file</button>
     </div>
   </aside>
 </main>
@@ -703,6 +705,12 @@ $("pick").onclick = async () => {
   } catch (e) { toast(e.message, true); }
   finally { btn.disabled = false; btn.textContent = "Add folder…"; }
 };
+$("open-config").addEventListener("click", async () => {
+  try {
+    await api("/api/config/open", {});
+    toast("Opened the settings file. Restart Findling after saving changes.");
+  } catch (e) { toast(e.message, true); }
+});
 if (!IS_MAC) { // the folder dialog is macOS only
   $("pick").remove();
   $("add-path").placeholder = "Paste a folder path, e.g. ~/Documents";

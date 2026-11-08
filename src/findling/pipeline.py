@@ -103,18 +103,18 @@ class DoclingTools:
 
     def __init__(self) -> None:
         self._lock = threading.Lock()
-        self._converter = None
+        self._converters: dict[bool, object] = {}  # by OCR on/off
         self._chunker = None
         self._document_stream = None
-        self._formats_seen: set[str] = set()
+        self._formats_seen: set[tuple[str, bool]] = set()
 
-    def _ensure_loaded(self) -> None:
-        if self._converter is not None:
+    def _ensure_loaded(self, ocr: bool) -> None:
+        if ocr in self._converters:
             return
         with _LOAD_LOCK:
-            self._load()
+            self._load(ocr)
 
-    def _load(self) -> None:
+    def _load(self, ocr: bool) -> None:
         # All docling imports happen here, under _LOAD_LOCK: they import transformers,
         # which breaks if another thread imports it at the same time.
         from docling.chunking import HybridChunker
@@ -125,10 +125,13 @@ class DoclingTools:
             HuggingFaceTokenizer,
         )
 
-        pdf_options = PdfPipelineOptions(do_ocr=False, do_table_structure=True)
-        self._converter = DocumentConverter(
+        # OCR engine: docling picks one (macOS: Apple's Vision framework via ocrmac).
+        pdf_options = PdfPipelineOptions(do_ocr=ocr, do_table_structure=True)
+        self._converters[ocr] = DocumentConverter(
             format_options={InputFormat.PDF: PdfFormatOption(pipeline_options=pdf_options)}
         )
+        if self._chunker is not None:
+            return
         # Size chunks with the embedding model's own tokenizer. A separate
         # instance: this one runs in a worker thread.
         tokenizer = HuggingFaceTokenizer(
@@ -137,18 +140,19 @@ class DoclingTools:
         self._chunker = HybridChunker(tokenizer=tokenizer, merge_peers=True)
         self._document_stream = DocumentStream
 
-    def convert_and_chunk(self, name: str, data: bytes) -> list[DocChunk]:
+    def convert_and_chunk(self, name: str, data: bytes, ocr: bool = False) -> list[DocChunk]:
         with self._lock:
-            self._ensure_loaded()
+            self._ensure_loaded(ocr)
+            converter = self._converters[ocr]
             stream = self._document_stream(name=name, stream=BytesIO(data))
-            fmt = pathlib.PurePath(name).suffix.lower()
+            fmt = (pathlib.PurePath(name).suffix.lower(), ocr)
             if fmt in self._formats_seen:
-                result = self._converter.convert(stream)
+                result = converter.convert(stream)
             else:
                 # docling sets up each format's pipeline on first use, and the PDF one
                 # loads models that import transformers: also under the load lock.
                 with _LOAD_LOCK:
-                    result = self._converter.convert(stream)
+                    result = converter.convert(stream)
                 self._formats_seen.add(fmt)
             chunks: list[DocChunk] = []
             for chunk in self._chunker.chunk(dl_doc=result.document):
@@ -413,6 +417,7 @@ async def _process_file_body(
     rel_path: str,
     ext: str,
     extension_names: tuple[str, ...],
+    ocr: bool,
     table: sqlite.TableTarget[ChunkRow],
     skip,
 ) -> None:
@@ -434,7 +439,7 @@ async def _process_file_body(
             # docling picks the parser from the file name's extension.
             name = abs_path.with_suffix("." + cfg.DOCLING_ALIASES.get(ext, ext)).name
             chunks = await asyncio.to_thread(
-                coco.use_context(DOCLING).convert_and_chunk, name, data
+                coco.use_context(DOCLING).convert_and_chunk, name, data, ocr
             )
         else:
             text = _decode_text(await file.read())
@@ -548,6 +553,7 @@ async def process_file(
     folder: str,
     max_file_bytes: int,
     extension_names: tuple[str, ...],
+    ocr: bool,
     table: sqlite.TableTarget[ChunkRow],
     issues: sqlite.TableTarget[IssueRow],
 ) -> None:
@@ -561,7 +567,9 @@ async def process_file(
         skip = _issue_writer(issues, folder, rel_path, abs_path)
         skip(f"larger than {max_file_bytes // (1024 * 1024)} MB")
         return
-    await _index_file(file, folder, extension_names, table, issues)
+    # OCR only affects PDFs: turning it on or off reprocesses only those.
+    ocr = ocr and abs_path.suffix.lower() == ".pdf"
+    await _index_file(file, folder, extension_names, ocr, table, issues)
 
 
 @coco.fn(memo=True, deps=PIPELINE_FINGERPRINT)
@@ -569,6 +577,7 @@ async def _index_file(
     file: FileLike,
     folder: str,
     extension_names: tuple[str, ...],
+    ocr: bool,
     table: sqlite.TableTarget[ChunkRow],
     issues: sqlite.TableTarget[IssueRow],
 ) -> None:
@@ -580,7 +589,7 @@ async def _index_file(
     ACTIVE_FILES[str(abs_path)] = time.time()
     try:
         await _process_file_body(
-            file, folder, abs_path, rel_path, ext, extension_names, table, skip
+            file, folder, abs_path, rel_path, ext, extension_names, ocr, table, skip
         )
     finally:
         ACTIVE_FILES.pop(str(abs_path), None)
@@ -623,13 +632,14 @@ async def index_folder(
     exclude: tuple[str, ...],
     max_file_bytes: int,
     extension_names: tuple[str, ...],
+    ocr: bool,
     table: sqlite.TableTarget[ChunkRow],
     issues: sqlite.TableTarget[IssueRow],
 ) -> None:
     # live: keep watching the folder for changes
     files = _walk_folder(folder, exclude, live=True)
     await coco.mount_each(
-        process_file, files.items(), folder, max_file_bytes, extension_names, table, issues
+        process_file, files.items(), folder, max_file_bytes, extension_names, ocr, table, issues
     )
 
 
@@ -671,6 +681,7 @@ async def app_main() -> None:
             config.exclude,
             config.max_file_bytes,
             config.extensions,
+            config.ocr,
             table,
             issues,
         )
