@@ -55,7 +55,7 @@ jobs:
           ## Install or update
 
           1. Install or update the program (needs [uv](https://docs.astral.sh/uv/)):
-             \`uv tool install --force git+https://github.com/${GITHUB_REPOSITORY}@${GITHUB_REF_NAME}\`
+             \`uv tool install --python 3.12 --force git+https://github.com/${GITHUB_REPOSITORY}@${GITHUB_REF_NAME}\`
           2. Download **findling.mcpb** below and double-click it to add it to Claude Desktop.
 
           A running Findling restarts with the new version the next time Claude starts the extension.

@@ -8,5 +8,5 @@ for candidate in "$(command -v findling-mcp 2>/dev/null)" "${XDG_BIN_HOME:-$HOME
     exec "$candidate"
   fi
 done
-echo "findling: findling-mcp not found. Install Findling in Terminal with: uv tool install git+https://github.com/CedricFauth/findling" >&2
+echo "findling: findling-mcp not found. Install Findling in Terminal with: uv tool install --python 3.12 git+https://github.com/CedricFauth/findling" >&2
 exit 1
