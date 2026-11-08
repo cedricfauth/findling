@@ -75,7 +75,7 @@ def test_restarts_outdated_server_started_by_a_bridge(monkeypatch, tmp_path):
 def test_keeps_current_unknown_or_foreign_servers(monkeypatch, tmp_path):
     for status, command in [
         ({"version": "0.5.0", "pid": 42}, OURS),  # same version
-        ({"model_ready": True}, OURS),  # before 0.4.0: no version, no pid
+        ({"model_ready": True}, OURS),  # older servers: no version, no pid
         ({"version": "0.4.0", "pid": 42}, "/x/.venv/bin/findling"),  # started in a terminal
         ({"version": "0.4.0", "pid": 42}, "/usr/bin/something-else"),
     ]:

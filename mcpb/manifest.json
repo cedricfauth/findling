@@ -3,7 +3,7 @@
   "manifest_version": "0.3",
   "name": "findling",
   "display_name": "Findling local search",
-  "version": "0.4.0",
+  "version": "0.1.0",
   "description": "Search your local files by meaning and by exact words, with passages ready to cite.",
   "long_description": "Connects Claude to Findling, a private search over folders on this Mac (documents, PDFs, web pages, notes, code). Results come grouped per file with their best passages, heading paths, pages and a link that shows each passage highlighted in your browser. Claude can also read on from a passage, open a section by name (\"§ 1599\"), and browse folders, files and sections.\n\nInstall Findling first, in Terminal: `uv tool install git+https://github.com/CedricFauth/findling`. This extension starts the Findling web app in the background when needed (it keeps running after Claude quits, until you log out) and forwards to it: the search model and the index stay in the app. Add folders at http://127.0.0.1:8765.",
   "author": {
@@ -53,5 +53,5 @@
     "platforms": ["darwin"]
   },
   "keywords": ["search", "rag", "local", "documents"],
-  "license": "Private"
+  "license": "AGPL-3.0-or-later"
 }
