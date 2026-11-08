@@ -1,0 +1,63 @@
+# Pushing a tag vX.Y.Z checks the versions, runs the tests, builds findling.mcpb and
+# publishes a GitHub release with it. Run it by hand (Actions → Release → Run workflow)
+# to check and build without releasing.
+name: Release
+
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Versions match
+        run: |
+          py=$(python3 -c 'import tomllib; print(tomllib.load(open("pyproject.toml", "rb"))["project"]["version"])')
+          mcpb=$(python3 -c 'import json; print(json.load(open("mcpb/manifest.json"))["version"])')
+          echo "pyproject.toml: $py, mcpb/manifest.json: $mcpb, ref: $GITHUB_REF_NAME"
+          [ "$py" = "$mcpb" ] || { echo "::error::pyproject.toml and mcpb/manifest.json versions differ"; exit 1; }
+          if [ "$GITHUB_REF_TYPE" = tag ] && [ "$GITHUB_REF_NAME" != "v$py" ]; then
+            echo "::error::tag $GITHUB_REF_NAME doesn't match version $py"; exit 1
+          fi
+
+      - uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: true
+
+      - name: Tests
+        run: uv run --with pytest pytest tests -q
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Build findling.mcpb
+        run: npx -y @anthropic-ai/mcpb pack mcpb dist/findling.mcpb
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: findling.mcpb
+          path: dist/findling.mcpb
+
+      - name: Publish release
+        if: github.ref_type == 'tag'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "$GITHUB_REF_NAME" dist/findling.mcpb --title "Findling $GITHUB_REF_NAME" --generate-notes --notes "$(cat <<EOF
+          ## Install or update
+
+          1. Install or update the program (needs [uv](https://docs.astral.sh/uv/)):
+             \`uv tool install --force git+https://github.com/${GITHUB_REPOSITORY}@${GITHUB_REF_NAME}\`
+          2. Download **findling.mcpb** below and double-click it to add it to Claude Desktop.
+
+          A running Findling restarts with the new version the next time Claude starts the extension.
+          EOF
+          )"
