@@ -93,6 +93,7 @@ class Indexer:
                 self._set("paused", " ".join(problems) + " Indexing is paused; search still works.")
                 return
             self._db_path = config.db_path
+            config.db_path.parent.mkdir(parents=True, exist_ok=True)  # first start
             self._run += 1
             handle = pipeline.APP.update(live=True)
             self.started_at = time.time()

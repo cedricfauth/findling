@@ -9,7 +9,10 @@ import tomlkit
 
 from . import extensions
 
-CONFIG_PATH = pathlib.Path(os.environ.get("FINDLING_CONFIG") or "folders.toml")
+CONFIG_PATH = pathlib.Path(
+    os.environ.get("FINDLING_CONFIG")
+    or pathlib.Path.home() / "Library/Application Support/Findling/folders.toml"
+)
 
 # Changing the model (or any chunking setting below) reprocesses all files automatically.
 EMBED_MODEL = "intfloat/multilingual-e5-small"
@@ -152,7 +155,7 @@ def load_config(path: pathlib.Path = CONFIG_PATH, *, check_folders: bool = True)
     try:
         data = tomllib.loads(path.read_text())
     except FileNotFoundError:
-        raise ConfigError(f"Config file not found: {path}") from None
+        data = {}  # first start: no folders yet (adding one in the web app creates the file)
     except (OSError, tomllib.TOMLDecodeError) as e:
         raise ConfigError(f"Cannot read {path}: {e}") from None
     folders: list[str] = []
@@ -167,7 +170,7 @@ def load_config(path: pathlib.Path = CONFIG_PATH, *, check_folders: bool = True)
             folders.append(str(folder))
     if problem := nesting_problem(folders):
         raise ConfigError(f"{problem} Fix {path}.")
-    db_path = pathlib.Path(data.get("db_path", "./data/findling.db")).expanduser()
+    db_path = pathlib.Path(data.get("db_path", "findling.db")).expanduser()
     if not db_path.is_absolute():
         db_path = (path.parent / db_path).resolve()
     names = tuple(dict.fromkeys(data.get("extensions", [])))
@@ -212,6 +215,7 @@ def save_folders(folders: list[str], path: pathlib.Path = CONFIG_PATH) -> None:
     new_text = tomlkit.dumps(doc)
     if tomllib.loads(new_text).get("folders") != folders:  # never write a broken config
         raise ConfigError("Could not update the folder list in the config file.")
+    path.parent.mkdir(parents=True, exist_ok=True)
     tmp = path.with_suffix(path.suffix + ".tmp")
     tmp.write_text(new_text)
     tmp.replace(path)

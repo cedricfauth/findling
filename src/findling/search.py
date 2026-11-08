@@ -1,9 +1,9 @@
 """Hybrid (meaning + exact words) search over the Findling index from the command line.
 
-    uv run findling-search "how do I configure the backup job"
-    uv run findling-search "Kündigungsfrist" -k 5 --folder ~/Documents
+    findling-search "how do I configure the backup job"
+    findling-search "Kündigungsfrist" -k 5 --folder ~/Documents
 
-The web app (uv run findling) does the same without reloading the model each time.
+The web app (findling) does the same without reloading the model each time.
 """
 
 import argparse
